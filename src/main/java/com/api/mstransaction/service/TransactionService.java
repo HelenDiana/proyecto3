@@ -9,4 +9,5 @@ import reactor.core.publisher.Mono;
 public interface TransactionService {
     public Observable<Transaction> listTransactions();
     public Mono<Transaction> save(Transaction transaction);
+    public Double calculateBalance(String sourceAccount);
 }

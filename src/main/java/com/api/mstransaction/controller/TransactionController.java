@@ -35,18 +35,34 @@ public class TransactionController {
     }
     
     @PostMapping("/transactions/withdraw")
-    public ResponseEntity<String> withdraw(@RequestBody Transaction transactionRequestBody) {
-        transactionRequestBody.setType("RETIRO");
-        transactionRequestBody.setDestinationAccount("");
-        transactionService.save(transactionRequestBody).subscribe();
-        return new ResponseEntity<>(HttpStatus.CREATED);
+    public ResponseEntity<Map<String, Object>> withdraw(@RequestBody Transaction transactionRequestBody) {
+        Double balance = transactionService.calculateBalance(transactionRequestBody.getSourceAccount());
+        if (balance - transactionRequestBody.getAmount() < 0) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Saldo insuficiente para retirar");
+            return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+        }else{
+            transactionRequestBody.setType("RETIRO");
+            transactionRequestBody.setDestinationAccount("");
+            transactionService.save(transactionRequestBody).subscribe();
+            return new ResponseEntity<>(HttpStatus.CREATED);
+        }
     }
     
     @PostMapping("/transactions/transfer")
-    public ResponseEntity<String> transfer(@RequestBody Transaction transactionRequestBody) {
-        transactionRequestBody.setType("TRANSFERENCIA");
-        transactionService.save(transactionRequestBody).subscribe();
-        return new ResponseEntity<>(HttpStatus.CREATED);
+    public ResponseEntity<Map<String, Object>> transfer(@RequestBody Transaction transactionRequestBody) {
+        
+        Double balance = transactionService.calculateBalance(transactionRequestBody.getSourceAccount());
+        System.out.println("com.api.mstransaction.controller.TransactionController.transfer()" + balance);
+        if (balance - transactionRequestBody.getAmount() < 0) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Saldo insuficiente para hacer transferencia");
+            return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+        }else{
+             transactionRequestBody.setType("TRANSFERENCIA");
+            transactionService.save(transactionRequestBody).subscribe();
+            return new ResponseEntity<>(HttpStatus.CREATED);
+        }
     }
     
     @GetMapping("/transactions/historial")
