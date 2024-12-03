@@ -2,6 +2,9 @@ package com.api.mstransaction.controller;
 
 import com.api.mstransaction.model.Transaction;
 import com.api.mstransaction.service.TransactionService;
+import com.api.mstransaction.strategy.DepositStrategy;
+import com.api.mstransaction.strategy.TransactionStrategy;
+import com.api.mstransaction.strategy.WithdrawStrategy;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.HashMap;
@@ -27,25 +30,23 @@ public class TransactionController {
     
     @PostMapping("/transactions/deposit")
     public ResponseEntity<String> desposit(@RequestBody Transaction transactionRequestBody) {
-        transactionRequestBody.setType("DEPOSITO");
-        transactionRequestBody.setDestinationAccount("");
-        System.out.println("com.api.mstransaction.controller.TransactionController.desposit():: "+ transactionRequestBody.toString());
+        TransactionStrategy strategy = new DepositStrategy();
+        strategy.process(transactionRequestBody);
         transactionService.save(transactionRequestBody).subscribe();
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
     
     @PostMapping("/transactions/withdraw")
     public ResponseEntity<Map<String, Object>> withdraw(@RequestBody Transaction transactionRequestBody) {
-        Double balance = transactionService.calculateBalance(transactionRequestBody.getSourceAccount());
-        if (balance - transactionRequestBody.getAmount() < 0) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "Saldo insuficiente para retirar");
-            return new ResponseEntity<>(response, HttpStatus.CONFLICT);
-        }else{
-            transactionRequestBody.setType("RETIRO");
-            transactionRequestBody.setDestinationAccount("");
+        try {
+            TransactionStrategy strategy = new WithdrawStrategy(transactionService);
+            strategy.process(transactionRequestBody);
             transactionService.save(transactionRequestBody).subscribe();
             return new ResponseEntity<>(HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.CONFLICT);
         }
     }
     
